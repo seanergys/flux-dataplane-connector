@@ -1,4 +1,4 @@
-FROM sean-dev:latest
+FROM sean-dev:flux-events
 
 # Match the default user id for a single system so we aren't root
 ARG USERNAME=vscode

@@ -23,7 +23,7 @@ include_directories( ${CMAKE_BINARY_DIR} )
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake)
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../cmake)
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_PREFIX})
 
 # external dependencies
@@ -31,7 +31,8 @@ find_package(PkgConfig REQUIRED)
 set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${CMAKE_INSTALL_PREFIX}/lib/pkgconfig")
 pkg_check_modules(JANSSON REQUIRED IMPORTED_TARGET jansson>=2.10)
 pkg_check_modules(seanerbus REQUIRED IMPORTED_TARGET seanerbus)
-find_package(FluxCore REQUIRED)
+
+#find_package(FluxCore REQUIRED)
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   message(STATUS "flux core found and no specific prefix specified, using ${FLUX_CORE_PREFIX}")
@@ -49,11 +50,12 @@ message(STATUS "Forcing libdir selection to match flux-core: prefix subdir (${FL
 message(STATUS "    flux-core library path: (${FLUX_CORE_LIBDIR})")
 message(STATUS "    libdataplaneconnect library path: (${CMAKE_INSTALL_PREFIX}/${FLUX_CORE_LIBEXT})")
 
-#pkg_check_modules(UUID REQUIRED IMPORTED_TARGET uuid)
 
+add_library(dataplaneconnect
+  "src/DataplaneConnection.cpp"
+  "src/capi.cpp"
+)
 
-add_library(libdataplaneconnect "src/DataplaneConnection.cpp")
-
-target_link_libraries(libdataplaneconnect PUBLIC flux::core PkgConfig::JANSSON)
-target_link_libraries(libdataplaneconnect PUBLIC PkgConfig::seanerbus)
-target_include_directories(libdataplaneconnect PRIVATE "include")
+target_link_libraries(dataplaneconnect PRIVATE flux::core PkgConfig::JANSSON)
+target_link_libraries(dataplaneconnect PUBLIC PkgConfig::seanerbus)
+target_include_directories(dataplaneconnect PRIVATE "include")

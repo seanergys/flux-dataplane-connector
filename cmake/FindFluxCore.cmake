@@ -13,6 +13,7 @@ endif()
 pkg_check_modules(FLUX_CORE REQUIRED IMPORTED_TARGET flux-core)
 set(FLUX_PREFIX ${FLUX_CORE_PREFIX})
 set(LIBFLUX_VERSION ${FLUX_CORE_VERSION})
+set(FLUXCORE_FOUND true)
 
 find_program(FLUX flux
     PATHS ${FLUX_PREFIX}/bin ENV PATH)

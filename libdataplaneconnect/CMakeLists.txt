@@ -32,7 +32,7 @@ set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${CMAKE_INSTALL_PREFIX}/lib/pkgc
 pkg_check_modules(JANSSON REQUIRED IMPORTED_TARGET jansson>=2.10)
 pkg_check_modules(seanerbus REQUIRED IMPORTED_TARGET seanerbus)
 
-#find_package(FluxCore REQUIRED)
+find_package(FluxCore REQUIRED)
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   message(STATUS "flux core found and no specific prefix specified, using ${FLUX_CORE_PREFIX}")

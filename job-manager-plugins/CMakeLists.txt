@@ -40,7 +40,7 @@ message(STATUS "    plugin library path: (${CMAKE_INSTALL_PREFIX}/${FLUX_CORE_LI
 
 set(CMAKE_SHARED_LIBRARY_PREFIX_C "")
 
-add_library(publish-jobs-dataplane SHARED "publish-jobs-dataplane.c")
+add_library(publish-jobs-dataplane SHARED "publish-jobs-dataplane.c" "jj.c")
 
 add_subdirectory(../libdataplaneconnect libdataplaneconnect) # this should pull in flux core
 

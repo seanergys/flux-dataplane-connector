@@ -7,13 +7,13 @@ extern "C" {
 
 using namespace Flux::cplusplus_wrappers;
 
-struct fdpc_handle {
+struct fdpc_handle_s {
     flux_t *h;
     dataplane_connection::DataPlaneConnection c;
 };
 
 static fdpc_handle_t *fdpc_connection_new_safe(flux_t *h, const char *address, const char *port) {
-    fdpc_handle_t *handle = new fdpc_handle { h, dataplane_connection::DataPlaneConnection { h, address, port }};
+    fdpc_handle_t *handle = new fdpc_handle_s { h, dataplane_connection::DataPlaneConnection { h, address, port }};
     return handle;
 }
 
@@ -27,6 +27,12 @@ fdpc_handle_t *fdpc_connection_new(flux_t *h, const char *address, const char *p
     return handle;
 }
 
+void fdpc_connection_set_error_cb (fdpc_handle_t *handle, fdpc_error_f cb, void *arg)
+{
+    handle->c.set_error_cb([cb, handle, arg](int errnum){
+        cb(handle, errnum, arg);
+    });
+}
 
 static void fdpc_publish_lifecycle_event_safe(fdpc_handle_t *handle, const char *publish_to_addr, const char *payload) {
     auto addr = seanerbus::Address{ seanerbus::Uuid{ publish_to_addr } };

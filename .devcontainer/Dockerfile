@@ -1,4 +1,4 @@
-FROM sean-dev:flux-events
+FROM sean-flux-dev:latest
 
 # Match the default user id for a single system so we aren't root
 ARG USERNAME=vscode
@@ -16,7 +16,8 @@ RUN sudo apt-get -qq install -y --no-install-recommends \
         fd-find \
         less \
         bats \
-        ripgrep
+        ripgrep \
+        clang-format
 
 # Assuming installing to /usr/local
 ENV LD_LIBRARY_PATH=/usr/lib:/usr/local/lib:/opt/flux/lib:/opt/seanerbus/lib

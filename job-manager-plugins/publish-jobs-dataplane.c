@@ -54,7 +54,7 @@ static json_t *process_finish_event (flux_plugin_t *p,
         const char *type;
         const char *rc_state;
         json_unpack (event_context,
-                     "{s:s}"
+                     "{s:s}",
                      "type",
                      &type);
         if (strcmp (type, "cancel") == 0) {
@@ -64,7 +64,8 @@ static json_t *process_finish_event (flux_plugin_t *p,
         } else {
             rc_state = "FAILED";
         }
-        return json_pack ("{s:s, s:O}", "rc_state", rc_state, "exception", event_context);
+        json_t* finish_info =  json_pack ("{s:s, s:O}", "rc_state", rc_state, "exception", event_context);
+        return finish_info;
     }
     return NULL;
 }
@@ -106,7 +107,7 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
     }
 
     if (state == FLUX_JOB_STATE_DEPEND || state == FLUX_JOB_STATE_PRIORITY
-        || state == FLUX_JOB_STATE_RUN) {
+        || state == FLUX_JOB_STATE_RUN || state == FLUX_JOB_STATE_SCHED) {
         json_t *jobspec;
         int user_id;
         double submit_time;
@@ -136,7 +137,16 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
         struct jj_counts resource_counts;
         jj_get_counts_json (jobspec, &resource_counts);
         int ngpus = resource_counts.nslots * resource_counts.slot_gpus;
-        resources = json_pack ("{s:i, s:i}", "nnodes", resource_counts.nnodes, "ngpus", ngpus);
+        int ncpus = resource_counts.nslots * resource_counts.slot_size;
+        resources = json_pack ("{s:i, s:i, s:i, s:i}",
+                               "nslots",
+                               resource_counts.nslots,
+                               "nnodes",
+                               resource_counts.nnodes,
+                               "ncpus",
+                               ncpus,
+                               "ngpus",
+                               ngpus);
 
         json_unpack (jobspec, "{s:{s:{s:s}}}", "attributes", "system", "bank", &bank);
 
@@ -178,7 +188,6 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
 }
 
 static const struct flux_plugin_handler tab[] = {
-    //    {"job.create", create_cb, NULL},
     {"job.state.depend", state_change_cb, NULL},
     {"job.state.priority", state_change_cb, NULL},
     {"job.state.sched", state_change_cb, NULL},

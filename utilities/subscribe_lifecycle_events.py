@@ -9,7 +9,7 @@ import capnp
 import asyncio
 import uuid
 import sys
-
+import json
 
 async def main():
     # Connect to the SeanerBUS
@@ -21,7 +21,11 @@ async def main():
     while True:
         # read incoming messages from the bus, interpreting them as TimeValueV1's
         ev = FluxLifecycleEventV1.from_capnp(await c.read_msg())
-        print("data=", "".join(ev.data))
+        payload_str = "".join(ev.data)
+        payload = json.loads(payload_str)
+        print("```json")
+        print(json.dumps(payload, indent=4))
+        print("```")
 
 
 if len(sys.argv) != 2:

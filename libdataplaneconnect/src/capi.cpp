@@ -12,14 +12,15 @@ struct fdpc_handle_s {
     dataplane_connection::DataPlaneConnection c;
 };
 
-static fdpc_handle_t *fdpc_connection_new_safe(flux_t *h, const char *address, const char *port) {
-    fdpc_handle_t *handle = new fdpc_handle_s { h, dataplane_connection::DataPlaneConnection { h, address, port }};
-    return handle;
+static int fdpc_connection_new_safe(flux_t *h, const char *address, const char *port, fdpc_handle_t **handle) {
+    *handle = new fdpc_handle_s { h, dataplane_connection::DataPlaneConnection { h, address, port }};
+    return 0;
 }
 
 fdpc_handle_t *fdpc_connection_new(flux_t *h, const char *address, const char *port) {
     eh_wrapper_t exception_safe_wrapper;
-    fdpc_handle_t *handle = exception_safe_wrapper (fdpc_connection_new_safe, h, address, port);
+    fdpc_handle_t *handle;
+    exception_safe_wrapper (fdpc_connection_new_safe, h, address, port, &handle);
     if (exception_safe_wrapper.bad ()) {
         flux_log_error (h, "%s: %s", __FUNCTION__, exception_safe_wrapper.get_err_message ());
         return nullptr;

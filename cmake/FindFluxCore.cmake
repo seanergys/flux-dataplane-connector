@@ -1,3 +1,5 @@
+include_guard(GLOBAL)
+
 if(DEFINED FLUX_CORE_PREFIX)
     set(ENV{PKG_CONFIG_PATH} "${FLUX_CORE_PREFIX}/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
 else()

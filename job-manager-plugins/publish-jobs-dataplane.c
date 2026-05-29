@@ -53,10 +53,7 @@ static json_t *process_finish_event (flux_plugin_t *p,
     } else if (strcmp (event_name, "exception") == 0) {
         const char *type;
         const char *rc_state;
-        json_unpack (event_context,
-                     "{s:s}",
-                     "type",
-                     &type);
+        json_unpack (event_context, "{s:s}", "type", &type);
         if (strcmp (type, "cancel") == 0) {
             rc_state = "CANCELLED";
         } else if (strcmp (type, "timelimit") == 0) {
@@ -64,7 +61,8 @@ static json_t *process_finish_event (flux_plugin_t *p,
         } else {
             rc_state = "FAILED";
         }
-        json_t* finish_info =  json_pack ("{s:s, s:O}", "rc_state", rc_state, "exception", event_context);
+        json_t *finish_info =
+            json_pack ("{s:s, s:O}", "rc_state", rc_state, "exception", event_context);
         return finish_info;
     }
     return NULL;
@@ -79,6 +77,7 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
     json_t *resources = NULL;
     json_t *submit_info = NULL;
     json_t *finish_info = NULL;
+    json_t *run_info = NULL;
 
     fdpc_handle_t *dataplane =
         flux_plugin_aux_get (p, "flux::publish-jobs-dataplane::dataplane_handle");
@@ -160,13 +159,31 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
                                  submit_time,
                                  "walltime",
                                  resource_counts.duration);
+        if (state == FLUX_JOB_STATE_RUN) {
+            json_t *R;
+            json_t *nodelist;
+
+            if (flux_plugin_arg_unpack (args, FLUX_PLUGIN_ARG_IN, "{s:o}", "R", &R) < 0) {
+                flux_jobtap_raise_exception (p,
+                                             FLUX_JOBTAP_CURRENT_JOB,
+                                             "alloc",
+                                             0,
+                                             "delegate: unpack: %s",
+                                             flux_plugin_arg_strerror (args));
+                flux_log_error (h, "flux_plugin_arg_unpack");
+                return -1;
+            }
+
+            json_unpack (R, "{s{s:O}}", "execution", "nodelist", &nodelist);
+            run_info = json_pack ("{s:o}", "nodelist", nodelist);
+        }
     } else if (state == FLUX_JOB_STATE_CLEANUP) {
         finish_info = process_finish_event (p, args, "entry");
     } else if (state == FLUX_JOB_STATE_INACTIVE) {
         finish_info = process_finish_event (p, args, "end_event");
     }
 
-    json_t *payload = json_pack ("{s:i, s:I, s:s, s:s, s:o*, s:o*, s:o*}",
+    json_t *payload = json_pack ("{s:i, s:I, s:s, s:s, s:o*, s:o*, s:o*, s:o*}",
                                  "v",
                                  0,
                                  "jobid",
@@ -179,6 +196,8 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
                                  resources,
                                  "submit_info",
                                  submit_info,
+                                 "run_info",
+                                 run_info,
                                  "finish_info",
                                  finish_info);
 

@@ -47,8 +47,7 @@ void dataplane_connection::DataPlaneConnection::fd_watcher_cb (flux_reactor_t *r
 void dataplane_connection::DataPlaneConnection::handle_error (int errnum)
 {
     // first things first: Disable further polling
-    flux_watcher_destroy (fd_watcher_);
-    fd_watcher_ = nullptr;
+    flux_watcher_stop(fd_watcher_);
     // report error if we can
     if (error_cb_) {
         (*error_cb_) (errnum);
@@ -62,6 +61,7 @@ DataPlaneConnection::DataPlaneConnection (flux_t *h, std::string address, std::s
     int fd = Connection::get_fd ();
     // actually create th watcher...
     fd_watcher_ = flux_fd_watcher_create (r, fd, FLUX_POLLIN | FLUX_POLLERR, fd_watcher_c_cb, this);
+    flux_watcher_start(fd_watcher_);
 }
 
 DataPlaneConnection::~DataPlaneConnection ()

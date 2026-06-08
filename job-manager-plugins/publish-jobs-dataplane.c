@@ -65,12 +65,12 @@ static json_t *process_finish_event (flux_plugin_t *p,
             rc_state = "FAILED";
         }
         return json_pack ("{s:s, s:O, s:f}",
-                                         "rc_state",
-                                         rc_state,
-                                         "exception",
-                                         event_context,
-                                         "finish_time",
-                                         timestamp);
+                          "rc_state",
+                          rc_state,
+                          "exception",
+                          event_context,
+                          "finish_time",
+                          timestamp);
     }
     return NULL;
 }
@@ -174,11 +174,12 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
 
             if (flux_plugin_arg_unpack (args,
                                         FLUX_PLUGIN_ARG_IN,
-                                        "{s:o, s:o}",
+                                        "{s:o, s{s:F}}",
                                         "R",
                                         &R,
                                         "entry",
-                                        &event)
+                                        "timestamp",
+                                        &timestamp)
                 < 0) {
                 flux_jobtap_raise_exception (p,
                                              FLUX_JOBTAP_CURRENT_JOB,
@@ -191,7 +192,6 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
             }
 
             json_unpack (R, "{s{s:O}}", "execution", "nodelist", &nodelist);
-            json_unpack (event, "{s:F}", "timestamp", &timestamp);
             run_info = json_pack ("{s:o, s:f}", "nodelist", nodelist, "start_time", timestamp);
         }
     } else if (state == FLUX_JOB_STATE_CLEANUP) {

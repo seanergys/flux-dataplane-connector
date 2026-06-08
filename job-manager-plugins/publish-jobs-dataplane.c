@@ -29,11 +29,14 @@ static json_t *process_finish_event (flux_plugin_t *p,
 {
     const char *event_name;
     json_t *event_context;
+    double timestamp;
 
     if (flux_plugin_arg_unpack (args,
                                 FLUX_PLUGIN_ARG_IN,
-                                "{s{s:s, s:o}}",
+                                "{s{s:f s:s, s:o}}",
                                 event_key,
+                                "timestamp",
+                                &timestamp,
                                 "name",
                                 &event_name,
                                 "context",
@@ -49,7 +52,7 @@ static json_t *process_finish_event (flux_plugin_t *p,
     }
 
     if (strcmp (event_name, "finish") == 0) {
-        return json_pack ("{s:s}", "rc_state", "COMPLETED");
+        return json_pack ("{s:s, s:f}", "rc_state", "COMPLETED", "finish_time", timestamp);
     } else if (strcmp (event_name, "exception") == 0) {
         const char *type;
         const char *rc_state;
@@ -61,9 +64,13 @@ static json_t *process_finish_event (flux_plugin_t *p,
         } else {
             rc_state = "FAILED";
         }
-        json_t *finish_info =
-            json_pack ("{s:s, s:O}", "rc_state", rc_state, "exception", event_context);
-        return finish_info;
+        return json_pack ("{s:s, s:O, s:f}",
+                                         "rc_state",
+                                         rc_state,
+                                         "exception",
+                                         event_context,
+                                         "finish_time",
+                                         timestamp);
     }
     return NULL;
 }
@@ -162,8 +169,17 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
         if (state == FLUX_JOB_STATE_RUN) {
             json_t *R;
             json_t *nodelist;
+            json_t *event;
+            double timestamp;
 
-            if (flux_plugin_arg_unpack (args, FLUX_PLUGIN_ARG_IN, "{s:o}", "R", &R) < 0) {
+            if (flux_plugin_arg_unpack (args,
+                                        FLUX_PLUGIN_ARG_IN,
+                                        "{s:o, s:o}",
+                                        "R",
+                                        &R,
+                                        "entry",
+                                        &event)
+                < 0) {
                 flux_jobtap_raise_exception (p,
                                              FLUX_JOBTAP_CURRENT_JOB,
                                              "alloc",
@@ -175,7 +191,8 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
             }
 
             json_unpack (R, "{s{s:O}}", "execution", "nodelist", &nodelist);
-            run_info = json_pack ("{s:o}", "nodelist", nodelist);
+            json_unpack (event, "{s:F}", "timestamp", &timestamp);
+            run_info = json_pack ("{s:o, s:f}", "nodelist", nodelist, "start_time", timestamp);
         }
     } else if (state == FLUX_JOB_STATE_CLEANUP) {
         finish_info = process_finish_event (p, args, "entry");

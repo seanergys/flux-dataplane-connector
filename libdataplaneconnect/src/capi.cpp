@@ -9,11 +9,11 @@ using namespace Flux::cplusplus_wrappers;
 
 struct fdpc_handle_s {
     flux_t *h;
-    dataplane_connection::DataPlaneConnection c;
+    dataplane_connection::FluxDataPlaneDriver d;
 };
 
 static int fdpc_connection_new_safe(flux_t *h, const char *address, const char *port, fdpc_handle_t **handle) {
-    *handle = new fdpc_handle_s { h, dataplane_connection::DataPlaneConnection { h, address, port }};
+    *handle = new fdpc_handle_s { h, dataplane_connection::FluxDataPlaneDriver { h, address, port }};
     return 0;
 }
 
@@ -30,7 +30,7 @@ fdpc_handle_t *fdpc_connection_new(flux_t *h, const char *address, const char *p
 
 void fdpc_connection_set_error_cb (fdpc_handle_t *handle, fdpc_error_f cb, void *arg)
 {
-    handle->c.on_error([cb, handle, arg](int errnum){
+    handle->d.on_error([cb, handle, arg](int errnum){
         cb(handle, errnum, arg);
     });
 }
@@ -38,7 +38,7 @@ void fdpc_connection_set_error_cb (fdpc_handle_t *handle, fdpc_error_f cb, void 
 static void fdpc_publish_lifecycle_event_safe(fdpc_handle_t *handle, const char *publish_to_addr, const char *payload) {
     auto addr = seanerbus::Address{ seanerbus::Uuid{ publish_to_addr } };
     auto event = seanerbus::msg::FluxLifecycleEventV1 { payload };
-    handle->c.publish(addr, event.to_capnp());
+    handle->d.connection()->publish(addr, event.to_capnp());
 }
 
 int fdpc_publish_lifecycle_event(fdpc_handle_t *handle, const char *publish_to_addr, const char *payload) {

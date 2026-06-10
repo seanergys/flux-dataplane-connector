@@ -55,7 +55,10 @@ add_library(dataplaneconnect
   "src/DataplaneConnection.cpp"
   "src/capi.cpp"
 )
-
 target_link_libraries(dataplaneconnect PRIVATE flux::core PkgConfig::JANSSON)
 target_link_libraries(dataplaneconnect PUBLIC PkgConfig::seanerbus)
-target_include_directories(dataplaneconnect PRIVATE "include")
+target_include_directories(dataplaneconnect PUBLIC "include")
+set_target_properties(dataplaneconnect PROPERTIES PUBLIC_HEADER "include/DataplaneConnection.hpp")
+
+
+install(TARGETS dataplaneconnect PUBLIC_HEADER DESTINATION "include/libdataplaneconnect")

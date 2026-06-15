@@ -114,15 +114,17 @@ static int build_submit_info (json_t *jobspec,
                               json_t **submit_info)
 {
     const char *bank = "";
-    const char *queue = "";
+    const char *queue = "default";
     const char *job_name = "";
 
     json_unpack (jobspec,
-                 "{s:{s:{s:s, s{s:s}}}}",
+                 "{s:{s:{s:s, s:s, s{s:s}}}}",
                  "attributes",
                  "system",
                  "bank",
                  &bank,
+                 "queue",
+                 &queue,
                  "job",
                  "name",
                  &job_name);

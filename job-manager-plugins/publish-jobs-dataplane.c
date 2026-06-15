@@ -75,10 +75,76 @@ static json_t *process_finish_event (flux_plugin_t *p,
     return NULL;
 }
 
+static int build_run_info (flux_t *h, flux_plugin_t *p, flux_plugin_arg_t *args, json_t **run_info)
+{
+    json_t *jobspec;
+    json_t *R;
+    json_t *nodelist;
+    json_t *event;
+    double timestamp;
+
+    if (flux_plugin_arg_unpack (args,
+                                FLUX_PLUGIN_ARG_IN,
+                                "{s:o, s{s:F}}",
+                                "R",
+                                &R,
+                                "entry",
+                                "timestamp",
+                                &timestamp)
+        < 0) {
+        flux_jobtap_raise_exception (p,
+                                     FLUX_JOBTAP_CURRENT_JOB,
+                                     "alloc",
+                                     0,
+                                     "delegate: unpack: %s",
+                                     flux_plugin_arg_strerror (args));
+        flux_log_error (h, "flux_plugin_arg_unpack");
+        return -1;
+    }
+
+    json_unpack (R, "{s{s:O}}", "execution", "nodelist", &nodelist);
+    *run_info = json_pack ("{s:o, s:f}", "nodelist", nodelist, "start_time", timestamp);
+    return 0;
+}
+
+static int build_submit_info (json_t *jobspec, int user_id, double submit_time, double duration, json_t **submit_info)
+{
+    const char *bank = "";
+    const char *queue = "";
+    const char *job_name = "";
+
+    json_unpack (jobspec,
+                 "{s:{s:{s:s, s{s:s}}}}",
+                 "attributes",
+                 "system",
+                 "bank",
+                 &bank,
+                 "job",
+                 "name",
+                 &job_name);
+
+    *submit_info = json_pack ("{s:i, s:s, s:s, s:s, s:f, s:f}",
+                              "owner",
+                              user_id,
+                              "jobname",
+                              job_name,
+                              "budget",
+                              bank,
+                              "queue",
+                              queue,
+                              "submittime",
+                              submit_time,
+                              "walltime",
+                              duration);
+
+    return 0;
+}
+
 static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg_t *args, void *arg)
 {
     flux_t *h = flux_jobtap_get_flux (p);
     flux_jobid_t job_id;
+    char *job_id_f58;
     flux_job_state_t state;
     flux_job_state_t prev_state;
     json_t *resources = NULL;
@@ -112,12 +178,14 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
         return -1;
     }
 
+    job_id_f58 = malloc (32);
+    flux_job_id_encode (job_id, "f58plain", job_id_f58, 32);
+
     if (state == FLUX_JOB_STATE_DEPEND || state == FLUX_JOB_STATE_PRIORITY
         || state == FLUX_JOB_STATE_RUN || state == FLUX_JOB_STATE_SCHED) {
         json_t *jobspec;
         int user_id;
         double submit_time;
-        const char *bank = "";
 
         if (flux_plugin_arg_unpack (args,
                                     FLUX_PLUGIN_ARG_IN,
@@ -154,45 +222,12 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
                                "ngpus",
                                ngpus);
 
-        json_unpack (jobspec, "{s:{s:{s:s}}}", "attributes", "system", "bank", &bank);
+        build_submit_info(jobspec, user_id, submit_time, resource_counts.duration, &submit_info);
 
-        // stitch together `submit_info`
-        submit_info = json_pack ("{s:i, s:s, s:f, s:f}",
-                                 "owner",
-                                 user_id,
-                                 "budget",
-                                 bank,
-                                 "submittime",
-                                 submit_time,
-                                 "walltime",
-                                 resource_counts.duration);
         if (state == FLUX_JOB_STATE_RUN) {
-            json_t *R;
-            json_t *nodelist;
-            json_t *event;
-            double timestamp;
-
-            if (flux_plugin_arg_unpack (args,
-                                        FLUX_PLUGIN_ARG_IN,
-                                        "{s:o, s{s:F}}",
-                                        "R",
-                                        &R,
-                                        "entry",
-                                        "timestamp",
-                                        &timestamp)
-                < 0) {
-                flux_jobtap_raise_exception (p,
-                                             FLUX_JOBTAP_CURRENT_JOB,
-                                             "alloc",
-                                             0,
-                                             "delegate: unpack: %s",
-                                             flux_plugin_arg_strerror (args));
-                flux_log_error (h, "flux_plugin_arg_unpack");
+            if (build_run_info (h, p, args, &run_info) != 0) {
                 return -1;
             }
-
-            json_unpack (R, "{s{s:O}}", "execution", "nodelist", &nodelist);
-            run_info = json_pack ("{s:o, s:f}", "nodelist", nodelist, "start_time", timestamp);
         }
     } else if (state == FLUX_JOB_STATE_CLEANUP) {
         finish_info = process_finish_event (p, args, "entry");
@@ -200,11 +235,13 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
         finish_info = process_finish_event (p, args, "end_event");
     }
 
-    json_t *payload = json_pack ("{s:i, s:I, s:s, s:s, s:o*, s:o*, s:o*, s:o*}",
+    json_t *payload = json_pack ("{s:i, s:I, s:s, s:s, s:s, s:o*, s:o*, s:o*, s:o*}",
                                  "v",
                                  0,
                                  "jobid",
                                  (json_int_t)job_id,
+                                 "jobid_f58",
+                                 job_id_f58,
                                  "state",
                                  flux_job_statetostr (state, "l"),
                                  "prev_state",
@@ -220,6 +257,7 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
 
     post_lifecycle_event (dataplane, payload);
     json_decref (payload);
+
     return 0;
 }
 

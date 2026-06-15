@@ -107,7 +107,11 @@ static int build_run_info (flux_t *h, flux_plugin_t *p, flux_plugin_arg_t *args,
     return 0;
 }
 
-static int build_submit_info (json_t *jobspec, int user_id, double submit_time, double duration, json_t **submit_info)
+static int build_submit_info (json_t *jobspec,
+                              int user_id,
+                              double submit_time,
+                              double duration,
+                              json_t **submit_info)
 {
     const char *bank = "";
     const char *queue = "";
@@ -147,10 +151,12 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
     char *job_id_f58;
     flux_job_state_t state;
     flux_job_state_t prev_state;
+    json_int_t priority;
     json_t *resources = NULL;
     json_t *submit_info = NULL;
     json_t *finish_info = NULL;
     json_t *run_info = NULL;
+    json_t *sched_info = NULL;
 
     fdpc_handle_t *dataplane =
         flux_plugin_aux_get (p, "flux::publish-jobs-dataplane::dataplane_handle");
@@ -160,13 +166,15 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
 
     if (flux_plugin_arg_unpack (args,
                                 FLUX_PLUGIN_ARG_IN,
-                                "{s:I, s:i, s:i}",
+                                "{s:I, s:i, s:i, s:I}",
                                 "id",
                                 &job_id,
                                 "state",
                                 &state,
                                 "prev_state",
-                                &prev_state)
+                                &prev_state,
+                                "priority",
+                                &priority)
         < 0) {
         flux_jobtap_raise_exception (p,
                                      FLUX_JOBTAP_CURRENT_JOB,
@@ -222,20 +230,26 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
                                "ngpus",
                                ngpus);
 
-        build_submit_info(jobspec, user_id, submit_time, resource_counts.duration, &submit_info);
+        build_submit_info (jobspec, user_id, submit_time, resource_counts.duration, &submit_info);
 
         if (state == FLUX_JOB_STATE_RUN) {
             if (build_run_info (h, p, args, &run_info) != 0) {
                 return -1;
             }
         }
-    } else if (state == FLUX_JOB_STATE_CLEANUP) {
+    }
+
+    if (state == FLUX_JOB_STATE_SCHED) {
+        sched_info = json_pack ("{s:I}", "priority", priority);
+    }
+
+    if (state == FLUX_JOB_STATE_CLEANUP) {
         finish_info = process_finish_event (p, args, "entry");
     } else if (state == FLUX_JOB_STATE_INACTIVE) {
         finish_info = process_finish_event (p, args, "end_event");
     }
 
-    json_t *payload = json_pack ("{s:i, s:I, s:s, s:s, s:s, s:o*, s:o*, s:o*, s:o*}",
+    json_t *payload = json_pack ("{s:i, s:I, s:s, s:s, s:s, s:o*, s:o*, s:o*, s:o*, s:o*}",
                                  "v",
                                  0,
                                  "jobid",
@@ -250,6 +264,8 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
                                  resources,
                                  "submit_info",
                                  submit_info,
+                                 "sched_info",
+                                 sched_info,
                                  "run_info",
                                  run_info,
                                  "finish_info",

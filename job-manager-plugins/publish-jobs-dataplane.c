@@ -113,21 +113,25 @@ static int build_submit_info (json_t *jobspec,
                               double duration,
                               json_t **submit_info)
 {
+    json_t *system_attrs;
     const char *bank = "";
-    const char *queue = "default";
+    const char *queue = "";
     const char *job_name = "";
+    json_t *job_attr = NULL;
 
     json_unpack (jobspec,
-                 "{s:{s:{s:s, s:s, s{s:s}}}}",
+                 "{s{s{s?s, s?s, s?o}}}",
                  "attributes",
                  "system",
-                 "bank",
-                 &bank,
                  "queue",
                  &queue,
+                 "bank",
+                 &bank,
                  "job",
-                 "name",
-                 &job_name);
+                 &job_attr);
+    if (job_attr) {  // man, jansson is weird
+        json_unpack (job_attr, "{s?s}", "name", &job_name);
+    }
 
     *submit_info = json_pack ("{s:i, s:s, s:s, s:s, s:f, s:f}",
                               "owner",
@@ -220,13 +224,38 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
         // stitch together `resources`
         struct jj_counts resource_counts;
         jj_get_counts_json (jobspec, &resource_counts);
+        int nnodes = resource_counts.nnodes;
+
+        // Hack to get the number of nodes after RUN state, if not specified in the jobspec
+        if (nnodes == 0
+            && (state == FLUX_JOB_STATE_RUN || state == FLUX_JOB_STATE_CLEANUP
+                || state == FLUX_JOB_STATE_INACTIVE)) {
+            json_t *nodelist;
+            if (flux_plugin_arg_unpack (args,
+                                        FLUX_PLUGIN_ARG_IN,
+                                        "{s{s{s:o}}}",
+                                        "R",
+                                        "execution",
+                                        "nodelist",
+                                        &nodelist)
+                < 0) {
+                flux_jobtap_raise_exception (p,
+                                             FLUX_JOBTAP_CURRENT_JOB,
+                                             "alloc",
+                                             0,
+                                             "delegate: unpack %s",
+                                             flux_plugin_arg_strerror (args));
+                return -1;
+            }
+            nnodes = json_array_size (nodelist);
+        }
         int ngpus = resource_counts.nslots * resource_counts.slot_gpus;
         int ncpus = resource_counts.nslots * resource_counts.slot_size;
         resources = json_pack ("{s:i, s:i, s:i, s:i}",
                                "nslots",
                                resource_counts.nslots,
                                "nnodes",
-                               resource_counts.nnodes,
+                               nnodes,
                                "ncpus",
                                ncpus,
                                "ngpus",

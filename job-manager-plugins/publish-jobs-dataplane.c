@@ -158,6 +158,10 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
     flux_job_state_t state;
     flux_job_state_t prev_state;
     json_int_t priority;
+    int user_id;
+    double submit_time;
+    json_t *jobspec;
+    
     json_t *resources = NULL;
     json_t *submit_info = NULL;
     json_t *finish_info = NULL;
@@ -172,7 +176,7 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
 
     if (flux_plugin_arg_unpack (args,
                                 FLUX_PLUGIN_ARG_IN,
-                                "{s:I, s:i, s:i, s:I}",
+                                "{s:I, s:i, s:i, s:I, s:i, s:f, s:o}",
                                 "id",
                                 &job_id,
                                 "state",
@@ -180,7 +184,13 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
                                 "prev_state",
                                 &prev_state,
                                 "priority",
-                                &priority)
+                                &priority,
+                                "userid",
+                                &user_id,
+                                "t_submit",
+                                &submit_time,
+                                "jobspec",
+                                &jobspec)
         < 0) {
         flux_jobtap_raise_exception (p,
                                      FLUX_JOBTAP_CURRENT_JOB,
@@ -195,78 +205,50 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
     job_id_f58 = malloc (32);
     flux_job_id_encode (job_id, "f58plain", job_id_f58, 32);
 
-    if (state == FLUX_JOB_STATE_DEPEND || state == FLUX_JOB_STATE_PRIORITY
-        || state == FLUX_JOB_STATE_RUN || state == FLUX_JOB_STATE_SCHED) {
-        json_t *jobspec;
-        int user_id;
-        double submit_time;
+    struct jj_counts resource_counts;
+    jj_get_counts_json (jobspec, &resource_counts);
+    int nnodes = resource_counts.nnodes;
 
+    // update the nnodes if whe have R
+    if (nnodes == 0 && (state == FLUX_JOB_STATE_RUN || state == FLUX_JOB_STATE_CLEANUP || state == FLUX_JOB_STATE_INACTIVE)) {
+        json_t *nodelist;
         if (flux_plugin_arg_unpack (args,
                                     FLUX_PLUGIN_ARG_IN,
-                                    "{s:o, s:i, s:f}",
-                                    "jobspec",
-                                    &jobspec,
-                                    "userid",
-                                    &user_id,
-                                    "t_submit",
-                                    &submit_time)
-            < 0) {
+                                    "{s{s{s:o}}}",
+                                    "R",
+                                    "execution",
+                                    "nodelist",
+                                    &nodelist)
+        < 0) {
             flux_jobtap_raise_exception (p,
-                                         FLUX_JOBTAP_CURRENT_JOB,
-                                         "alloc",
-                                         0,
-                                         "delegate: unpack: %s",
-                                         flux_plugin_arg_strerror (args));
-            flux_log_error (h, "flux_plugin_arg_unpack");
+                                            FLUX_JOBTAP_CURRENT_JOB,
+                                            "alloc",
+                                            0,
+                                            "delegate: unpack %s",
+                                            flux_plugin_arg_strerror (args));
             return -1;
         }
+        nnodes = json_array_size (nodelist);
+    }
 
-        // stitch together `resources`
-        struct jj_counts resource_counts;
-        jj_get_counts_json (jobspec, &resource_counts);
-        int nnodes = resource_counts.nnodes;
+    // stitch together `resources`
+    int ngpus = resource_counts.nslots * resource_counts.slot_gpus;
+    int ncpus = resource_counts.nslots * resource_counts.slot_size;
+    resources = json_pack ("{s:i, s:i, s:i, s:i}",
+                            "nslots",
+                            resource_counts.nslots,
+                            "nnodes",
+                            nnodes,
+                            "ncpus",
+                            ncpus,
+                            "ngpus",
+                            ngpus);
+    
+    build_submit_info(jobspec, user_id, submit_time, resource_counts.duration, &submit_info);
 
-        // Hack to get the number of nodes after RUN state, if not specified in the jobspec
-        if (nnodes == 0
-            && (state == FLUX_JOB_STATE_RUN || state == FLUX_JOB_STATE_CLEANUP
-                || state == FLUX_JOB_STATE_INACTIVE)) {
-            json_t *nodelist;
-            if (flux_plugin_arg_unpack (args,
-                                        FLUX_PLUGIN_ARG_IN,
-                                        "{s{s{s:o}}}",
-                                        "R",
-                                        "execution",
-                                        "nodelist",
-                                        &nodelist)
-                < 0) {
-                flux_jobtap_raise_exception (p,
-                                             FLUX_JOBTAP_CURRENT_JOB,
-                                             "alloc",
-                                             0,
-                                             "delegate: unpack %s",
-                                             flux_plugin_arg_strerror (args));
-                return -1;
-            }
-            nnodes = json_array_size (nodelist);
-        }
-        int ngpus = resource_counts.nslots * resource_counts.slot_gpus;
-        int ncpus = resource_counts.nslots * resource_counts.slot_size;
-        resources = json_pack ("{s:i, s:i, s:i, s:i}",
-                               "nslots",
-                               resource_counts.nslots,
-                               "nnodes",
-                               nnodes,
-                               "ncpus",
-                               ncpus,
-                               "ngpus",
-                               ngpus);
-
-        build_submit_info (jobspec, user_id, submit_time, resource_counts.duration, &submit_info);
-
-        if (state == FLUX_JOB_STATE_RUN) {
-            if (build_run_info (h, p, args, &run_info) != 0) {
-                return -1;
-            }
+    if (state == FLUX_JOB_STATE_RUN) {
+        if (build_run_info (h, p, args, &run_info) != 0) {
+            return -1;
         }
     }
 
@@ -304,6 +286,7 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
 
     post_lifecycle_event (dataplane, payload);
     json_decref (payload);
+    free(job_id_f58);
 
     return 0;
 }

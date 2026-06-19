@@ -16,7 +16,7 @@ async def main():
     c = await seanerbus.client.Connection.connect("localhost", 5398)
 
     # Subscribe to the UUID given on the command line
-    await c.subscribe(uuid.UUID(sys.argv[1]))
+    await c.subscribe(uuid.UUID("f50de671-c6c4-49a5-b684-22d2c321f605"))
 
     while True:
         # read incoming messages from the bus, interpreting them as TimeValueV1's
@@ -26,10 +26,5 @@ async def main():
         print("```json")
         print(json.dumps(payload, indent=4))
         print("```")
-
-
-if len(sys.argv) != 2:
-    print("subscribe_lifecycle_events.py UUID")
-    exit(-1)
 
 asyncio.run(capnp.run(main()))

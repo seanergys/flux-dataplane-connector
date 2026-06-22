@@ -8,6 +8,10 @@
 
 const char *service_uuid = "f50de671-c6c4-49a5-b684-22d2c321f605";
 
+struct job_run_info {
+    double start_time;
+};
+
 static void dataplane_destroy (fdpc_handle_t *handle)
 {
     if (!handle)
@@ -103,7 +107,42 @@ static int build_run_info (flux_t *h, flux_plugin_t *p, flux_plugin_arg_t *args,
     }
 
     json_unpack (R, "{s{s:O}}", "execution", "nodelist", &nodelist);
+
+    struct job_run_info *jri = malloc (sizeof (struct job_run_info));
+    jri->start_time = timestamp;
+    flux_jobtap_job_aux_set (p, FLUX_JOBTAP_CURRENT_JOB, "pjd::job_run_info", jri, free);
+
     *run_info = json_pack ("{s:o, s:f}", "nodelist", nodelist, "start_time", timestamp);
+    return 0;
+}
+
+static int build_run_info_finish (flux_t *h,
+                                  flux_plugin_t *p,
+                                  flux_plugin_arg_t *args,
+                                  json_t **run_info)
+{
+    json_t *nodelist;
+    struct job_run_info *jri;
+    if (flux_plugin_arg_unpack (args,
+                                FLUX_PLUGIN_ARG_IN,
+                                "{s{s{s:o}}}",
+                                "R",
+                                "execution",
+                                "nodelist",
+                                &nodelist)
+        < 0) {
+        flux_jobtap_raise_exception (p,
+                                     FLUX_JOBTAP_CURRENT_JOB,
+                                     "alloc",
+                                     0,
+                                     "delegate: unpack: %s",
+                                     flux_plugin_arg_strerror (args));
+        flux_log_error (h, "flux_plugin_arg_unpack");
+        return -1;
+    }
+
+    jri = flux_jobtap_job_aux_get (p, FLUX_JOBTAP_CURRENT_JOB, "pjd::job_run_info");
+    *run_info = json_pack ("{s:o, s:f}", "nodelist", nodelist, "start_time", jri->start_time);
     return 0;
 }
 
@@ -161,7 +200,7 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
     int user_id;
     double submit_time;
     json_t *jobspec;
-    
+
     json_t *resources = NULL;
     json_t *submit_info = NULL;
     json_t *finish_info = NULL;
@@ -210,7 +249,9 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
     int nnodes = resource_counts.nnodes;
 
     // update the nnodes if whe have R
-    if (nnodes == 0 && (state == FLUX_JOB_STATE_RUN || state == FLUX_JOB_STATE_CLEANUP || state == FLUX_JOB_STATE_INACTIVE)) {
+    if (nnodes == 0
+        && (state == FLUX_JOB_STATE_RUN || state == FLUX_JOB_STATE_CLEANUP
+            || state == FLUX_JOB_STATE_INACTIVE)) {
         json_t *nodelist;
         if (flux_plugin_arg_unpack (args,
                                     FLUX_PLUGIN_ARG_IN,
@@ -219,13 +260,13 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
                                     "execution",
                                     "nodelist",
                                     &nodelist)
-        < 0) {
+            < 0) {
             flux_jobtap_raise_exception (p,
-                                            FLUX_JOBTAP_CURRENT_JOB,
-                                            "alloc",
-                                            0,
-                                            "delegate: unpack %s",
-                                            flux_plugin_arg_strerror (args));
+                                         FLUX_JOBTAP_CURRENT_JOB,
+                                         "alloc",
+                                         0,
+                                         "delegate: unpack %s",
+                                         flux_plugin_arg_strerror (args));
             return -1;
         }
         nnodes = json_array_size (nodelist);
@@ -235,21 +276,23 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
     int ngpus = resource_counts.nslots * resource_counts.slot_gpus;
     int ncpus = resource_counts.nslots * resource_counts.slot_size;
     resources = json_pack ("{s:i, s:i, s:i, s:i}",
-                            "nslots",
-                            resource_counts.nslots,
-                            "nnodes",
-                            nnodes,
-                            "ncpus",
-                            ncpus,
-                            "ngpus",
-                            ngpus);
-    
-    build_submit_info(jobspec, user_id, submit_time, resource_counts.duration, &submit_info);
+                           "nslots",
+                           resource_counts.nslots,
+                           "nnodes",
+                           nnodes,
+                           "ncpus",
+                           ncpus,
+                           "ngpus",
+                           ngpus);
+
+    build_submit_info (jobspec, user_id, submit_time, resource_counts.duration, &submit_info);
 
     if (state == FLUX_JOB_STATE_RUN) {
         if (build_run_info (h, p, args, &run_info) != 0) {
             return -1;
         }
+    } else if (state == FLUX_JOB_STATE_CLEANUP || state == FLUX_JOB_STATE_INACTIVE) {
+        build_run_info_finish (h, p, args, &run_info);
     }
 
     if (state == FLUX_JOB_STATE_SCHED) {
@@ -286,7 +329,7 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
 
     post_lifecycle_event (dataplane, payload);
     json_decref (payload);
-    free(job_id_f58);
+    free (job_id_f58);
 
     return 0;
 }

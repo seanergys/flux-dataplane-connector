@@ -29,10 +29,12 @@ async def main():
         print(f"Got a JobClassificationReqV1: {payload.jobspec}")
         # Respond to it with a HelloWorldResV1
 
-        classification = "good" if random.random() > 0.5 else "bad"
+        classification = random.random()
+
+        resp_payload = f'{{"classification": {classification}}}'
 
         await c.respond_to(
-                msg, FluxClassifyJobResV1(classification).to_capnp()
+                msg, FluxClassifyJobResV1(resp_payload).to_capnp()
         )
 
 asyncio.run(capnp.run(main()))

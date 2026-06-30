@@ -142,7 +142,7 @@ static int build_run_info_finish (flux_t *h,
     }
 
     jri = flux_jobtap_job_aux_get (p, FLUX_JOBTAP_CURRENT_JOB, "pjd::job_run_info");
-    *run_info = json_pack ("{s:o, s:f}", "nodelist", nodelist, "start_time", jri->start_time);
+    *run_info = json_pack ("{s:O, s:f}", "nodelist", nodelist, "start_time", jri->start_time);
     return 0;
 }
 

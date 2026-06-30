@@ -8,6 +8,27 @@
 
 const char *service_uuid = "f50de671-c6c4-49a5-b684-22d2c321f605";
 
+const char *extract_job_displayname(json_t *jobspec) {
+    json_t *tasks;
+    json_t *command = NULL;
+    json_t *arg0;
+    const char *path;
+    json_unpack(jobspec, "{s:o}", "tasks", &tasks);
+    json_unpack(tasks, "[{s:o}]", "command", &command);
+    arg0 = json_array_get(command, 0);
+    path = json_string_value(arg0);
+
+    const char *p = strchr(path, '/');
+    if (p) {
+        p++;
+        if (*p == '\0') {
+            return path;
+        }
+        return p;
+    }
+    return path;
+}
+
 struct job_run_info {
     double start_time;
 };
@@ -156,6 +177,7 @@ static int build_submit_info (json_t *jobspec,
     const char *bank = "";
     const char *queue = "";
     const char *job_name = "";
+    const char *job_displayname = "";
     json_t *job_attr = NULL;
 
     json_unpack (jobspec,
@@ -171,12 +193,19 @@ static int build_submit_info (json_t *jobspec,
     if (job_attr) {  // man, jansson is weird
         json_unpack (job_attr, "{s?s}", "name", &job_name);
     }
+    if (strlen(job_name) != 0) {
+        job_displayname = job_name;
+    } else {
+        job_displayname = extract_job_displayname(jobspec);
+    }
 
-    *submit_info = json_pack ("{s:i, s:s, s:s, s:s, s:f, s:f}",
+    *submit_info = json_pack ("{s:i, s:s, s:s, s:s, s:s, s:f, s:f}",
                               "owner",
                               user_id,
                               "jobname",
                               job_name,
+                              "job_displayname",
+                              job_displayname,
                               "budget",
                               bank,
                               "queue",

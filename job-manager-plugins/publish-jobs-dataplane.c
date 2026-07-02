@@ -11,17 +11,18 @@
 
 const char *service_uuid = "f50de671-c6c4-49a5-b684-22d2c321f605";
 
-const char *extract_job_displayname(json_t *jobspec) {
+const char *extract_job_displayname (json_t *jobspec)
+{
     json_t *tasks;
     json_t *command = NULL;
     json_t *arg0;
     const char *path;
-    json_unpack(jobspec, "{s:o}", "tasks", &tasks);
-    json_unpack(tasks, "[{s:o}]", "command", &command);
-    arg0 = json_array_get(command, 0);
-    path = json_string_value(arg0);
+    json_unpack (jobspec, "{s:o}", "tasks", &tasks);
+    json_unpack (tasks, "[{s:o}]", "command", &command);
+    arg0 = json_array_get (command, 0);
+    path = json_string_value (arg0);
 
-    const char *p = strchr(path, '/');
+    const char *p = strchr (path, '/');
     if (p) {
         p++;
         if (*p == '\0') {
@@ -197,13 +198,13 @@ static int build_submit_info (json_t *jobspec,
     if (job_attr) {  // man, jansson is weird
         json_unpack (job_attr, "{s?s}", "name", &job_name);
     }
-    if (strlen(job_name) != 0) {
+    if (strlen (job_name) != 0) {
         job_displayname = job_name;
     } else {
-        job_displayname = extract_job_displayname(jobspec);
+        job_displayname = extract_job_displayname (jobspec);
     }
 
-    struct passwd *pw = getpwuid(user_id); // thread safety goes brrrrrrrr
+    struct passwd *pw = getpwuid (user_id);  // thread safety goes brrrrrrrr
     if (pw) {
         username = pw->pw_name;
     }

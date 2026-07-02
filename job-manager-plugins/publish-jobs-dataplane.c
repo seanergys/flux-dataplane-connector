@@ -6,6 +6,9 @@
 #include <jansson.h>
 #include "jj.h"
 
+#include <sys/types.h>
+#include <pwd.h>
+
 const char *service_uuid = "f50de671-c6c4-49a5-b684-22d2c321f605";
 
 const char *extract_job_displayname(json_t *jobspec) {
@@ -176,6 +179,7 @@ static int build_submit_info (json_t *jobspec,
     json_t *system_attrs;
     const char *bank = "";
     const char *queue = "";
+    const char *username = "";
     const char *job_name = "";
     const char *job_displayname = "";
     json_t *job_attr = NULL;
@@ -199,9 +203,16 @@ static int build_submit_info (json_t *jobspec,
         job_displayname = extract_job_displayname(jobspec);
     }
 
-    *submit_info = json_pack ("{s:i, s:s, s:s, s:s, s:s, s:f, s:f}",
+    struct passwd *pw = getpwuid(user_id); // thread safety goes brrrrrrrr
+    if (pw) {
+        username = pw->pw_name;
+    }
+
+    *submit_info = json_pack ("{s:i, s:s, s:s, s:s, s:s, s:s, s:f, s:f}",
                               "owner",
                               user_id,
+                              "owner_name",
+                              username,
                               "jobname",
                               job_name,
                               "job_displayname",

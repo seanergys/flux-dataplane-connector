@@ -392,7 +392,7 @@ int flux_plugin_init (flux_plugin_t *p)
     fdpc_handle_t *dataplane_handle;
 
     if (!h || flux_plugin_register (p, "publish-jobs-dataplane", tab) < 0
-        || !(dataplane_handle = fdpc_connection_new (h, "localhost", "5398"))
+        || !(dataplane_handle = fdpc_connection_new (h, "demobus://localhost:5398", "demobus://localhost:5398"))
         || flux_plugin_aux_set (p,
                                 "flux::publish-jobs-dataplane::dataplane_handle",
                                 dataplane_handle,

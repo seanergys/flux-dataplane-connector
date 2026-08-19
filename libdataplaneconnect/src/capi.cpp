@@ -3,7 +3,6 @@ extern "C" {
 }
 #include <DataplaneConnection.hpp>
 #include "eh_wrapper.hpp"
-#include <seanerbus/msg/flux_lifecycle_event_v1.hpp>
 
 using namespace Flux::cplusplus_wrappers;
 
@@ -12,12 +11,20 @@ struct fdpc_handle_s {
     dataplane_connection::FluxDataPlaneDriver d;
 };
 
-static int fdpc_connection_new_safe(flux_t *h, const char *address, const char *port, fdpc_handle_t **handle) {
-    *handle = new fdpc_handle_s { h, dataplane_connection::FluxDataPlaneDriver { h, address, port }};
+static int fdpc_connection_new_safe (flux_t *h,
+                                     const char *pub_sub_endpoint,
+                                     const char *req_res_endpoint,
+                                     fdpc_handle_t **handle)
+{
+    *handle = new fdpc_handle_s{h,
+                                dataplane_connection::FluxDataPlaneDriver{h,
+                                                                          pub_sub_endpoint,
+                                                                          req_res_endpoint}};
     return 0;
 }
 
-fdpc_handle_t *fdpc_connection_new(flux_t *h, const char *address, const char *port) {
+fdpc_handle_t *fdpc_connection_new (flux_t *h, const char *address, const char *port)
+{
     eh_wrapper_t exception_safe_wrapper;
     fdpc_handle_t *handle;
     exception_safe_wrapper (fdpc_connection_new_safe, h, address, port, &handle);
@@ -30,18 +37,24 @@ fdpc_handle_t *fdpc_connection_new(flux_t *h, const char *address, const char *p
 
 void fdpc_connection_set_error_cb (fdpc_handle_t *handle, fdpc_error_f cb, void *arg)
 {
-    handle->d.on_error([cb, handle, arg](int errnum){
-        cb(handle, errnum, arg);
-    });
+    handle->d.on_error ([cb, handle, arg] (int errnum) { cb (handle, errnum, arg); });
 }
 
-static void fdpc_publish_lifecycle_event_safe(fdpc_handle_t *handle, const char *publish_to_addr, const char *payload) {
-    auto addr = seanerbus::Address{ seanerbus::Uuid{ publish_to_addr } };
-    auto event = seanerbus::msg::FluxLifecycleEventV1 { payload };
-    handle->d.connection()->publish(addr, event.to_capnp());
+static void fdpc_publish_lifecycle_event_safe (fdpc_handle_t *handle,
+                                               const char *publish_to_addr,
+                                               const char *payload)
+{
+    auto addr = seanerbus::msg::Address{seanerbus::msg::Uuid (publish_to_addr)};
+    seanerbus::msg::MessageBuilder<FluxLifecycleEventV1> msg_builder;
+    msg_builder.builder ().setData (payload);
+    handle->d.connection ()->publish (msg_builder.to_message (addr));  // TODO: Error callback
+
 }
 
-int fdpc_publish_lifecycle_event(fdpc_handle_t *handle, const char *publish_to_addr, const char *payload) {
+int fdpc_publish_lifecycle_event (fdpc_handle_t *handle,
+                                  const char *publish_to_addr,
+                                  const char *payload)
+{
     flux_t *h = handle->h;
     eh_wrapper_t exception_safe_wrapper;
     exception_safe_wrapper (fdpc_publish_lifecycle_event_safe, handle, publish_to_addr, payload);
@@ -52,6 +65,7 @@ int fdpc_publish_lifecycle_event(fdpc_handle_t *handle, const char *publish_to_a
     return 0;
 }
 
-void fdpc_connection_free(fdpc_handle_t *handle) {
+void fdpc_connection_free (fdpc_handle_t *handle)
+{
     delete handle;
 }

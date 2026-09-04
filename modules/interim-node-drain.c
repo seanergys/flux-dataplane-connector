@@ -9,8 +9,6 @@ static void drain_request_continue(flux_future_t *f, void *arg) {
         flux_t *h = flux_future_get_flux(f);
         flux_log_error(h, "Draining nodes failed: %s", flux_future_error_string(f));
     }
-    printf("MR: CONTINUED\n");
-    fflush(0);
 }
 
 static void sub_cb (fdpc_handle_t *dataplane, const char *msg, void *arg)
@@ -49,7 +47,7 @@ static void sub_cb (fdpc_handle_t *dataplane, const char *msg, void *arg)
                                       "update",
                                       "reason",
                                       reason);
-    // TODO Handle error from rpc
+
     flux_future_then(f, -1., drain_request_continue, NULL);
 }
 

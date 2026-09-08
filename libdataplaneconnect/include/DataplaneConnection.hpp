@@ -18,7 +18,7 @@ class FluxDataPlaneDriver {
     void handle_error (int errnum);
 
 public:
-    FluxDataPlaneDriver(flux_t *h, std::string address, std::string port);
+    FluxDataPlaneDriver(flux_t *h, std::string pub_sub_endpoint, std::string req_res_endpoint);
     ~FluxDataPlaneDriver();
     seanerbus::client::Connection *connection() {
         return &connection_;
@@ -30,6 +30,9 @@ public:
         error_cb_ = error_cb;
     }
     static void fd_watcher_cb (flux_reactor_t *r, flux_watcher_t *w, int revents, void *arg);
+    void trigger() {
+        connection_.handle();
+    }
 };
 
 }  // namespace dataplane_connection

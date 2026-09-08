@@ -5,7 +5,7 @@ using namespace Flux::cplusplus_wrappers;
 using namespace dataplane_connection;
 
 // Flux reactor Callbacks
-static void fd_watcher_c_cb2 (flux_reactor_t *r, flux_watcher_t *w, int revents, void *arg)
+static void fd_watcher_cb (flux_reactor_t *r, flux_watcher_t *w, int revents, void *arg)
 {
     eh_wrapper_t exception_safe_wrapper;
     exception_safe_wrapper (dataplane_connection::FluxDataPlaneDriver::fd_watcher_cb,
@@ -21,25 +21,27 @@ static void fd_watcher_c_cb2 (flux_reactor_t *r, flux_watcher_t *w, int revents,
 
 void dataplane_connection::FluxDataPlaneDriver::handle_error (int errnum)
 {
-    flux_watcher_stop(fd_watcher_);
+    flux_watcher_stop (fd_watcher_);
     if (error_cb_) {
-        (*error_cb_)(errnum);
+        (*error_cb_) (errnum);
     }
 }
 
 dataplane_connection::FluxDataPlaneDriver::FluxDataPlaneDriver (flux_t *h,
-                                                                std::string address,
-                                                                std::string port)
-    : flux_handle_ (h), connection_ (address, port)
+                                                                std::string pub_sub_endpoint,
+                                                                std::string req_res_endpoint)
+    : flux_handle_ (h), connection_ (pub_sub_endpoint, req_res_endpoint)
 {
-    flux_reactor_t *r = flux_get_reactor(h);
+    flux_reactor_t *r = flux_get_reactor (h);
     int fd = connection_.get_fd ();
-    fd_watcher_ = flux_fd_watcher_create(r, fd, FLUX_POLLIN | FLUX_POLLERR, fd_watcher_c_cb2, this);
-    flux_watcher_start(fd_watcher_);
+    fd_watcher_ =
+        flux_fd_watcher_create (r, fd, FLUX_POLLIN | FLUX_POLLERR | FLUX_POLLOUT, fd_watcher_cb, this);
+    flux_watcher_start (fd_watcher_);
 }
 
 dataplane_connection::FluxDataPlaneDriver::~FluxDataPlaneDriver ()
 {
+    connection_.shutdown ();
     flux_watcher_stop (fd_watcher_);
     flux_watcher_destroy (fd_watcher_);
 }
@@ -56,12 +58,10 @@ void dataplane_connection::FluxDataPlaneDriver::fd_watcher_cb (flux_reactor_t *r
     }
 
     if ((revents & FLUX_POLLIN)) {
-        // this will (try to) dispatch the connections incoming messages
-        driver->connection()->try_read ();
-
+        driver->connection ()->handle ();
         // Handle connection shutdown, somehow
         // I guess we could crash everything with an exception?
-        if (driver->connection()->is_shutdown ()) {
+        if (driver->connection ()->is_shutdown ()) {
             return;
         }
     }

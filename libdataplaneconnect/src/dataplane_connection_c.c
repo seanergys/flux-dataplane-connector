@@ -79,13 +79,13 @@ dataplane_context_t *dataplane_context_create_from_connection (flux_t *h,
 dataplane_context_t *dataplane_context_new (flux_t *h,
                                             const char *pub_sub_endpoint,
                                             const char *req_res_endpoint,
-                                            seanerbus_error_t *error)
+                                            seanerbus_error_t **error)
 {
     seanerbus_connection_t *connection;
     seanerbus_status_t seanerbus_rc;
 
     seanerbus_rc =
-        seanerbus_connection_create (pub_sub_endpoint, req_res_endpoint, &connection, &error);
+        seanerbus_connection_create (pub_sub_endpoint, req_res_endpoint, &connection, error);
 
     if (seanerbus_rc != SEANERBUS_STATUS_OK) {
         return NULL;

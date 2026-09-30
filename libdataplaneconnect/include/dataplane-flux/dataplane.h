@@ -13,7 +13,7 @@ dataplane_context_t *dataplane_context_create_from_connection (flux_t *h,
 dataplane_context_t *dataplane_context_new (flux_t *h,
                                             const char *pub_sub_endpoint,
                                             const char *req_res_endpoint,
-                                            seanerbus_error_t *error);
+                                            seanerbus_error_t **error);
 
 flux_t *dataplane_context_get_flux (dataplane_context_t *ctx);
 

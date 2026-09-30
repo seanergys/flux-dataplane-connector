@@ -379,27 +379,19 @@ int flux_plugin_init (flux_plugin_t *p)
         return -1;
     }
 
-    seanerbus_connection_t *dataplane_connection;
     seanerbus_error_t *seanerbus_error;
-    seanerbus_status_t seanerbus_rc;
+    dataplane_context_t *dp_ctx;
 
-    seanerbus_rc = seanerbus_connection_create ("demobus://localhost:5398",
-                                                "demobus://localhost:5398",
-                                                &dataplane_connection,
-                                                &seanerbus_error);
+    dp_ctx = dataplane_context_new (h,
+                                    "demobus://localhost:5398",
+                                    "demobus://localhost:5398",
+                                    &seanerbus_error);
 
-    if (seanerbus_rc != SEANERBUS_STATUS_OK) {
+    if (!dp_ctx) {
         flux_log (h,
                   LOG_ERR,
                   "Could not connect to seanerbus: %s",
                   seanerbus_error_message (seanerbus_error));
-        return -1;
-    }
-
-    dataplane_context_t *dp_ctx =
-        dataplane_context_create_from_connection (h, dataplane_connection);
-
-    if (!dp_ctx) {
         return -1;
     }
 

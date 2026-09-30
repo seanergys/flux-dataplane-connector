@@ -326,12 +326,11 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
     populate_from_jobspec (jobspec, builder);
 
     if (state == FLUX_JOB_STATE_RUN || state == FLUX_JOB_STATE_CLEANUP
-        || state == FLUX_JOB_STATE_INACTIVE)
-        {
-            if (populate_from_R (p, args, builder) < 0) {
-                return -1;
-            }
+        || state == FLUX_JOB_STATE_INACTIVE) {
+        if (populate_from_R (p, args, builder) < 0) {
+            return -1;
         }
+    }
 
     build_start_time (p, state, event_timestamp, builder);
 
@@ -356,7 +355,7 @@ static int state_change_cb (flux_plugin_t *p, const char *topic, flux_plugin_arg
                                   NULL);
 
     free (job_id_f58);
-    seanerbus_entity_destroy(entity);
+    seanerbus_entity_destroy (entity);
 
     return 0;
 }
@@ -390,7 +389,10 @@ int flux_plugin_init (flux_plugin_t *p)
                                                 &seanerbus_error);
 
     if (seanerbus_rc != SEANERBUS_STATUS_OK) {
-        // Handle error
+        flux_log (h,
+                  LOG_ERR,
+                  "Could not connect to seanerbus: %s",
+                  seanerbus_error_message (seanerbus_error));
         return -1;
     }
 
@@ -402,6 +404,7 @@ int flux_plugin_init (flux_plugin_t *p)
     }
 
     if (flux_plugin_register (p, "publish-jobs-dataplane2", tab) < 0) {
+        dataplane_context_destroy (dp_ctx);
         return -1;
     }
 
@@ -410,6 +413,7 @@ int flux_plugin_init (flux_plugin_t *p)
                              dp_ctx,
                              (flux_free_f)dataplane_destroy)
         < 0) {
+        dataplane_context_destroy (dp_ctx);
         return -1;
     }
     return 0;

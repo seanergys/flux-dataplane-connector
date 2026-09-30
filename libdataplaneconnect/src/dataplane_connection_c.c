@@ -1,4 +1,4 @@
-#include "dataplaneconnect/dataplane.h"
+#include "dataplane-flux/dataplane.h"
 
 struct dataplane_context {
     flux_t *h;

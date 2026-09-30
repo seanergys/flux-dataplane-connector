@@ -1,6 +1,6 @@
 #include <flux/core.h>
 #include <flux/jobtap.h>
-#include "../libdataplaneconnect/include/dataplaneconnect/dataplane.h"
+#include <dataplane-flux/dataplane.h>
 #include <stdio.h>
 #include <inttypes.h>
 #include <jansson.h>

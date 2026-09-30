@@ -119,7 +119,5 @@ int fdpc_subscribe_hello_world (fdpc_handle_t *handle,
 
 void fdpc_connection_free (fdpc_handle_t *handle)
 {
-    printf ("trying to delete fdpc handle\n");
-    fflush (0);
     delete handle;
 }

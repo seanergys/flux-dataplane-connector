@@ -54,8 +54,8 @@ message(STATUS "    libdataplaneconnect library path: (${CMAKE_INSTALL_PREFIX}/$
 
 add_library(dataplaneconnect
   "src/DataplaneConnection.cpp"
-  "src/capi.cpp"
   "src/dataplane_connection_c.c"
+  "src/legacy_c_api.cpp"
 )
 target_link_libraries(dataplaneconnect PRIVATE flux::core PkgConfig::JANSSON)
 target_link_libraries(dataplaneconnect PUBLIC PkgConfig::seanerbus PkgConfig::seanerbus-c)

@@ -84,8 +84,8 @@ dataplane_context_t *dataplane_context_new (flux_t *h,
     seanerbus_connection_t *connection;
     seanerbus_status_t seanerbus_rc;
 
-    seanerbus_rc = seanerbus_connection_create ("demobus://localhost:5398",
-                                                "demobus://localhost:5398",
+    seanerbus_rc = seanerbus_connection_create (pub_sub_endpoint,
+                                                req_res_endpoint,
                                                 &connection,
                                                 &error);
 

@@ -225,13 +225,16 @@ static int populate_from_R (flux_plugin_t *p,
                             seanerbus_FluxLifecycleEventV2_builder_t *builder)
 {
     json_t *nodelist;
+    json_t *R_lite;
     if (flux_plugin_arg_unpack (args,
                                 FLUX_PLUGIN_ARG_IN,
-                                "{s{s{s:o}}}",
+                                "{s{s{s:o, s:o}}}",
                                 "R",
                                 "execution",
                                 "nodelist",
-                                &nodelist)
+                                &nodelist,
+                                "R_lite",
+                                &R_lite)
         < 0) {
         flux_jobtap_raise_exception (p,
                                      FLUX_JOBTAP_CURRENT_JOB,
@@ -251,6 +254,30 @@ static int populate_from_R (flux_plugin_t *p,
     json_array_foreach (nodelist, idx, entry) {
         seanerbus_FluxLifecycleEventV2_set_NodeList (builder, idx, json_string_value (entry));
     }
+
+    seanerbus_FluxLifecycleEventV2_init_RLite (builder, json_array_size (R_lite), NULL);
+    json_array_foreach (R_lite, idx, entry) {
+        seanerbus_FluxLifecycleRLiteNode_builder_t *rlite_builder;
+        const char *rank;
+        const char *core;
+        const char *gpu = NULL;
+        json_unpack (entry,
+                     "{s:s, s:{s:s, s?s}}",
+                     "rank",
+                     &rank,
+                     "children",
+                     "core",
+                     &core,
+                     "gpu",
+                     &gpu);
+        seanerbus_FluxLifecycleEventV2_get_RLite_builder (builder, idx, &rlite_builder, NULL);
+        seanerbus_FluxLifecycleRLiteNode_set_Ranks (rlite_builder, rank);
+        seanerbus_FluxLifecycleRLiteNode_set_ChildCores (rlite_builder, core);
+        if (gpu) {
+            seanerbus_FluxLifecycleRLiteNode_set_ChildGpus (rlite_builder, gpu);
+        }
+    }
+
     return 0;
 }
 

@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 SEANERGYS Partners <https://seanergys.eu>
+#
+# SPDX-License-Identifier: LGPL-3.0-only
+
 FROM sean-flux-dev:latest
 
 # Match the default user id for a single system so we aren't root

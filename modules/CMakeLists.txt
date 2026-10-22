@@ -1,3 +1,7 @@
+# SPDX-FileCopyrightText: 2026 SEANERGYS Partners <https://seanergys.eu>
+#
+# SPDX-License-Identifier: LGPL-3.0-only
+
 cmake_minimum_required(VERSION 3.18)
 project(flux-modules LANGUAGES C)
 message(STATUS "Building Seanergys Flux Modules")

@@ -1,4 +1,7 @@
 [[modules]]
 name = "seanergys-dataplane-log"
 ranks = "0"
-#exec = true
+
+[[modules]]
+name = "interim-node-drain"
+ranks = "0"

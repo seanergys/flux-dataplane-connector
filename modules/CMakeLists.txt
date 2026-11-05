@@ -24,3 +24,6 @@ add_subdirectory(../libdataplaneconnect libdataplaneconnect) # this should pull 
 
 add_library(seanergys-dataplane-log SHARED "dataplane-log.c")
 target_link_libraries(seanergys-dataplane-log PUBLIC flux::core PkgConfig::JANSSON dataplaneconnect)
+
+add_library(interim-node-drain SHARED "interim-node-drain.c")
+target_link_libraries(interim-node-drain PUBLIC flux::core PkgConfig::JANSSON dataplaneconnect)

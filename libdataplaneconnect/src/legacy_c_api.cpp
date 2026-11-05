@@ -49,7 +49,7 @@ static void fdpc_publish_lifecycle_event_safe (fdpc_handle_t *handle,
                                                const char *publish_to_addr,
                                                const char *payload)
 {
-    auto addr = seanerbus::msg::Address{seanerbus::msg::Uuid (publish_to_addr)};
+    auto addr = seanerbus::msg::Entity{seanerbus::msg::Uuid (publish_to_addr)};
     seanerbus::msg::MessageBuilder<FluxLifecycleEventV1> msg_builder;
     msg_builder.builder ().setData (payload);
     handle->d.connection ()->publish (msg_builder.to_message (addr));  // TODO: Error callback
@@ -74,7 +74,7 @@ static int _fdpc_subscribe_hello_world (fdpc_handle_t *handle,
                                         fdpc_hello_world_event_f cb,
                                         void *arg)
 {
-    auto addr = seanerbus::msg::Address (seanerbus::msg::Uuid (subscribe_to_addr));
+    auto addr = seanerbus::msg::Entity (seanerbus::msg::Uuid (subscribe_to_addr));
     handle->d.connection ()
         ->subscribe (addr,
                      [handle,
@@ -119,7 +119,5 @@ int fdpc_subscribe_hello_world (fdpc_handle_t *handle,
 
 void fdpc_connection_free (fdpc_handle_t *handle)
 {
-    printf ("trying to delete fdpc handle\n");
-    fflush (0);
     delete handle;
 }

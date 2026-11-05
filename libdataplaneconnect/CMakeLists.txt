@@ -31,6 +31,7 @@ find_package(PkgConfig REQUIRED)
 set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${CMAKE_INSTALL_PREFIX}/lib/pkgconfig")
 pkg_check_modules(JANSSON REQUIRED IMPORTED_TARGET jansson>=2.10)
 pkg_check_modules(seanerbus REQUIRED IMPORTED_TARGET seanerbus)
+pkg_check_modules(seanerbus-c REQUIRED IMPORTED_TARGET seanerbus-c)
 
 find_package(FluxCore REQUIRED)
 
@@ -53,10 +54,11 @@ message(STATUS "    libdataplaneconnect library path: (${CMAKE_INSTALL_PREFIX}/$
 
 add_library(dataplaneconnect
   "src/DataplaneConnection.cpp"
-  "src/capi.cpp"
+  "src/dataplane_connection_c.c"
+  "src/legacy_c_api.cpp"
 )
 target_link_libraries(dataplaneconnect PRIVATE flux::core PkgConfig::JANSSON)
-target_link_libraries(dataplaneconnect PUBLIC PkgConfig::seanerbus)
+target_link_libraries(dataplaneconnect PUBLIC PkgConfig::seanerbus PkgConfig::seanerbus-c)
 target_include_directories(dataplaneconnect PUBLIC "include")
 set_target_properties(dataplaneconnect PROPERTIES PUBLIC_HEADER "include/DataplaneConnection.hpp")
 

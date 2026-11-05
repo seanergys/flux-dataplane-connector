@@ -40,7 +40,6 @@ message(STATUS "Forcing libdir selection to match flux-core: prefix subdir (${FL
 message(STATUS "    flux-core library path: (${FLUX_CORE_LIBDIR})")
 message(STATUS "    plugin library path: (${CMAKE_INSTALL_PREFIX}/${FLUX_CORE_LIBEXT})")
 
-#pkg_check_modules(UUID REQUIRED IMPORTED_TARGET uuid)
 
 set(CMAKE_SHARED_LIBRARY_PREFIX "")
 
@@ -51,3 +50,15 @@ target_link_libraries(publish-jobs-dataplane PUBLIC flux::core PkgConfig::JANSSO
 
 add_library(publish-jobs-dataplane2 SHARED "publish-jobs-dataplane2.c" "jj.c")
 target_link_libraries(publish-jobs-dataplane2 PUBLIC flux::core PkgConfig::JANSSON dataplaneconnect)
+
+
+enable_testing()
+
+
+set(ALL_TESTS t1000-setup.t)
+foreach(test ${ALL_TESTS})
+  add_test(NAME ${test}
+    COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/${test})
+  set_tests_properties(${test} PROPERTIES ENVIRONMENT
+    "SHARNESS_BUILD_DIRECTORY=${CMAKE_BINARY_DIR};SHARNESS_TEST_SRCDIR=${CMAKE_CURRENT_SOURCE_DIR}/tests;PATH=$ENV{PATH}")
+endforeach()

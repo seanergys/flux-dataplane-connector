@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SEANERGYS Partners <https://seanergys.eu>
+ *
+ * SPDX-License-Identifier: LGPL-3.0-only
+ */
+
 #include <flux/core.h>
 #include <flux/jobtap.h>
 #include <dataplane-flux/dataplane.h>

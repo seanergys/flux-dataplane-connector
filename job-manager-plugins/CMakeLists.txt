@@ -55,10 +55,14 @@ target_link_libraries(publish-jobs-dataplane2 PUBLIC flux::core PkgConfig::JANSS
 enable_testing()
 
 
-set(ALL_TESTS t1000-setup.t)
+set(ALL_TESTS t1000-setup.t t1001-lifecycle-events.t)
 foreach(test ${ALL_TESTS})
   add_test(NAME ${test}
     COMMAND sh ${CMAKE_CURRENT_SOURCE_DIR}/tests/${test})
+  # TIMEOUT: a stuck test must fail with its output instead of stalling the whole
+  # ctest run (a test that leaves jobs running blocks broker shutdown for as long
+  # as those jobs run).
   set_tests_properties(${test} PROPERTIES ENVIRONMENT
-    "SHARNESS_BUILD_DIRECTORY=${CMAKE_BINARY_DIR};SHARNESS_TEST_SRCDIR=${CMAKE_CURRENT_SOURCE_DIR}/tests;PATH=$ENV{PATH}")
+    "SHARNESS_BUILD_DIRECTORY=${CMAKE_BINARY_DIR};SHARNESS_TEST_SRCDIR=${CMAKE_CURRENT_SOURCE_DIR}/tests;PATH=$ENV{PATH}"
+    TIMEOUT 300)
 endforeach()

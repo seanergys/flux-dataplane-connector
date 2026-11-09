@@ -61,9 +61,10 @@ test_stop_demobus() {
 #  including a failing assertion, which sharness' test_done does not run the
 #  cleanup for.
 #
-#  The server's stdout/stderr/stdin are fully redirected so the daemon never
-#  touches the harness' fd 3/4 (which would corrupt TAP output or hang the
-#  harness waiting for EOF).
+#  The server's stdout/stderr/stdin are redirected and the harness' fds 3-6
+#  are closed (fd 5 is a copy of the test's stdout, see sharness.sh), so a
+#  leaked server can neither corrupt TAP output nor keep a pipe open that
+#  makes the harness or ctest wait for EOF after the test process exits.
 #
 #  The launch command comes solely from $DEMOBUS_BIN; set it to however
 #  demobus is built in your image.
@@ -99,8 +100,11 @@ url with 'test_start_demobus demobus://0.0.0.0:<port>'"
     # from the url above as $addr).
 
     # Intentionally unquoted: DEMOBUS_BIN holds the command + its flags.
+    # fds 3-6 are the harness' (fd 5 is a copy of the test's stdout); close
+    # them so a leaked server cannot keep a pipe open that makes the harness
+    # or ctest wait for EOF.
     # shellcheck disable=SC2086
-    $DEMOBUS_BIN "$addr" >demobus.out 2>&1 </dev/null &
+    $DEMOBUS_BIN "$addr" >demobus.out 2>&1 </dev/null 3>&- 4>&- 5>&- 6>&- &
     echo $! >demobus.pid
     echo "# test_start_demobus: started demobus pid $(cat demobus.pid) on $addr" >&5
 

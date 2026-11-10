@@ -26,7 +26,7 @@
 #  'flux python' is deliberately not used here; set SEANERBUS_PYTHON to
 #  override. The url is passed to the sink as-is (twice: pub/sub and req/res),
 #  so it must be the endpoint the plugin under test connects to - the lifecycle
-#  plugins hardcode demobus://localhost:5398, so there is no free port choice.
+#  plugins hardcode seanerbroker://localhost:5398, so there is no free port choice.
 
 LIFECYCLE_SINK_SCRIPT=${SHARNESS_TEST_SRCDIR}/scripts/lifecycle_sink.py
 SEANERBUS_PYTHON=${SEANERBUS_PYTHON:-python3}
@@ -61,13 +61,13 @@ test_stop_lifecycle_sink() {
 #
 #  Reaping: cleanup() covers the passing path. sharness' test_done does not run
 #  cleanup() when a test failed, so the EXIT trap covers that one. POSIX sh has
-#  no 'trap -p', so the trap installed by test_start_demobus cannot be read
-#  back and is re-stated here explicitly (test_stop_demobus is idempotent, so
-#  it is safe even when no demobus was started). As a last resort the sink
+#  no 'trap -p', so the trap installed by test_start_seanerbroker cannot be read
+#  back and is re-stated here explicitly (test_stop_seanerbroker is idempotent,
+#  so it is safe even when no broker was started). As a last resort the sink
 #  exits by itself after its --timeout, so it can never outlive the test run.
 #
 #  $1 - topic uuid to subscribe to
-#  $2 - seanerbus url to connect to (demobus://host:port)
+#  $2 - seanerbus url to connect to (seanerbroker://host:port)
 #  $3 - file to write one JSON line per received event to
 #
 test_start_lifecycle_sink() {
@@ -100,9 +100,9 @@ test_start_lifecycle_sink() {
     cleanup test_stop_lifecycle_sink
 
     # Reap both daemons on exit. 'die' is sharness' own EXIT trap and must
-    # stay last; it needs the status test_stop_demobus returns, which is the
-    # one captured when the test process died.
-    trap 'test_stop_lifecycle_sink; test_stop_demobus; die' EXIT
+    # stay last; it needs the status test_stop_seanerbroker returns, which is
+    # the one captured when the test process died.
+    trap 'test_stop_lifecycle_sink; test_stop_seanerbroker; die' EXIT
 
     for _ in $(seq 1 100); do
         if grep -q '^subscribed$' "$LIFECYCLE_SINK_OUT" 2>/dev/null; then

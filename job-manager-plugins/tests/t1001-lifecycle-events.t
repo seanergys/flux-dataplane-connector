@@ -5,9 +5,9 @@ test_description="test the job lifecycle plugin publishes lifecycle events to th
 . `dirname $0`/sharness.sh
 
 JOB_LIFECYCLE_PLUGIN=${SHARNESS_BUILD_DIRECTORY}/publish-jobs-dataplane2.so
-# The lifecycle plugins hardcode this endpoint, so demobus and the sink have to
-# use exactly it (see sharness.d/lifecycle-sink.sh).
-DATA_PLANE_URL=demobus://localhost:5398
+# The lifecycle plugins hardcode this endpoint, so the broker and the sink have
+# to use exactly it (see sharness.d/lifecycle-sink.sh).
+DATA_PLANE_URL=seanerbroker://localhost:5398
 JOB_EVENTS_UUID=834d23e1-fd27-4537-b467-9702ef9ca8a2
 EVENTS=lifecycle_events.ndjson
 
@@ -19,8 +19,8 @@ export FLUX_F58_FORCE_ASCII=1
 
 # These three are what the tests need beyond flux itself; skip rather than fail
 # when the data plane pieces are not installed.
-if test -z "$DEMOBUS_BIN"; then
-    skip_all='DEMOBUS_BIN not set, skipping data plane lifecycle tests'
+if test -z "$SEANERBROKER_BIN"; then
+    skip_all='SEANERBROKER_BIN not set, skipping data plane lifecycle tests'
     test_done
 fi
 
@@ -32,7 +32,7 @@ fi
 
 # Two ranks so the -N2 job below is schedulable with one core per rank.
 test_under_flux 2
-test_start_demobus "$DATA_PLANE_URL"
+test_start_seanerbroker "$DATA_PLANE_URL"
 test_start_lifecycle_sink "$JOB_EVENTS_UUID" "$DATA_PLANE_URL" "$EVENTS"
 
 cleanup 'flux cancel --all || true'

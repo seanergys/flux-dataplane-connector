@@ -11,7 +11,7 @@ a topic and writes one normalized JSON object per message to stdout, so a
 sharness test can grep for the event it is waiting for.
 
     python3 lifecycle_sink.py <uuid> <endpoint> [--timeout SECONDS]
-    python3 lifecycle_sink.py 834d23e1-fd27-4537-b467-9702ef9ca8a2 demobus://localhost:5398
+    python3 lifecycle_sink.py 834d23e1-fd27-4537-b467-9702ef9ca8a2 seanerbroker://localhost:5398
 
 Must run under the *system* python3, which is where the seanerbus python
 bindings are installed (not flux python's interpreter).
@@ -99,7 +99,7 @@ async def main(args):
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("uuid", help="topic to subscribe to")
-parser.add_argument("endpoint", help="seanerbus endpoint, e.g. demobus://localhost:5398")
+parser.add_argument("endpoint", help="seanerbus endpoint, e.g. seanerbroker://localhost:5398")
 parser.add_argument(
     "--timeout",
     type=float,

@@ -168,7 +168,7 @@ static void build_start_time (flux_plugin_t *p,
         flux_jobtap_job_aux_set (p, FLUX_JOBTAP_CURRENT_JOB, "pjd2::start_time", jri, free);
         start_time = event_timestamp;
     } else {
-        jri = flux_jobtap_job_aux_get (p, FLUX_JOBTAP_CURRENT_JOB, "pjd::job_run_info");
+        jri = flux_jobtap_job_aux_get (p, FLUX_JOBTAP_CURRENT_JOB, "pjd2::start_time");
         if (jri) {
             start_time = jri->start_time;
         }
@@ -181,7 +181,6 @@ static int populate_from_jobspec (json_t *jobspec,
 {
     const char *bank = "";
     const char *queue = "";
-    const char *username = "";
     const char *job_name = "";
     const char *job_displayname = "";
     json_t *job_attr = NULL;
@@ -215,7 +214,6 @@ static int populate_from_jobspec (json_t *jobspec,
     seanerbus_FluxLifecycleEventV2_set_NNodes (builder, resource_counts.nnodes);
     seanerbus_FluxLifecycleEventV2_set_NCpus (builder, ncpus);
     seanerbus_FluxLifecycleEventV2_set_NGpus (builder, ngpus);
-    seanerbus_FluxLifecycleEventV2_set_OwnerName (builder, username);
     seanerbus_FluxLifecycleEventV2_set_JobName (builder, job_name);
     seanerbus_FluxLifecycleEventV2_set_JobDisplayName (builder, job_displayname);
     seanerbus_FluxLifecycleEventV2_set_Budget (builder, bank);
@@ -416,8 +414,8 @@ int flux_plugin_init (flux_plugin_t *p)
     dataplane_context_t *dp_ctx;
 
     dp_ctx = dataplane_context_new (h,
-                                    "demobus://localhost:5398",
-                                    "demobus://localhost:5398",
+                                    "seanerbroker://localhost:5398",
+                                    "seanerbroker://localhost:5398",
                                     &seanerbus_error);
 
     if (!dp_ctx) {

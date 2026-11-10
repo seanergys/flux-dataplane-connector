@@ -58,7 +58,7 @@ extern int mod_main (flux_t *h, int argc, char **argv)
     fdpc_handle_t *dataplane_conn;
 
     dataplane_conn =
-        fdpc_connection_new (h, "demobus://localhost:5398", "demobus://localhost:5398");
+        fdpc_connection_new (h, "seanerbroker://localhost:5398", "seanerbroker://localhost:5398");
     if (!dataplane_conn) {
         flux_log_error (h, "%s: fdpc_connection_new", __FUNCTION__);
         return -1;

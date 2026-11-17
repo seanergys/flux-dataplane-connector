@@ -25,8 +25,6 @@ endif("${isSystemDir}" STREQUAL "-1")
 # Setting the include directory for the application to find config.h
 include_directories( ${CMAKE_BINARY_DIR} )
 
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/../cmake)
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_INSTALL_PREFIX})
 

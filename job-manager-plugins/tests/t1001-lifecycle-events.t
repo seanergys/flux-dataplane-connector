@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# SPDX-FileCopyrightText: 2026 SEANERGYS Partners <https://seanergys.eu>
+#
+# SPDX-License-Identifier: MIT
+
 test_description="test the job lifecycle plugin publishes lifecycle events to the data plane"
 
 . `dirname $0`/sharness.sh

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#
+
 # SPDX-FileCopyrightText: 2026 SEANERGYS Partners <https://seanergys.eu>
 #
 # SPDX-License-Identifier: MIT

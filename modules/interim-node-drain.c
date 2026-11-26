@@ -1,3 +1,9 @@
+/*
+ * SPDX-FileCopyrightText: 2026 SEANERGYS Partners <https://seanergys.eu>
+ *
+ * SPDX-License-Identifier: MIT
+ */
+
 #include <flux/core.h>
 #include <jansson.h>
 #include "../libdataplaneconnect/include/dataplaneconnector-c.h"

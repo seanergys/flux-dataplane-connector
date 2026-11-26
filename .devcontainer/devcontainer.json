@@ -14,5 +14,6 @@
       ]
     }
   },
-  "postStartCommand": "git config --global --add safe.directory /workspaces/flux-dataplane-connect"
+  "postStartCommand": "git config --global --add safe.directory /workspaces/flux-dataplane-connector",
+  "remoteUser": "vscode"
 }

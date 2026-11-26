@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2026 SEANERGYS Partners <https://seanergys.eu>
+#
+# SPDX-License-Identifier: MIT
 
 #
 #  project-local sharness code for Flux
